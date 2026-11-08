@@ -1,0 +1,246 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Le Tribunal des Objets Rigolos ⚖️</title>
+  <style>
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+      margin: 0;
+      padding: 20px;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+    }
+    .game-container {
+      background: white;
+      border-radius: 15px;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.15);
+      padding: 25px;
+      width: 100%;
+      max-width: 500px;
+      box-sizing: border-box;
+    }
+    h1 { text-align: center; color: #2c3e50; margin-top: 0; }
+    .screen { display: none; }
+    .screen.active { display: block; }
+    .btn {
+      display: block;
+      width: 100%;
+      background: #3498db;
+      color: white;
+      border: none;
+      padding: 12px;
+      border-radius: 8px;
+      font-size: 16px;
+      font-weight: bold;
+      cursor: pointer;
+      margin-top: 15px;
+      transition: background 0.2s;
+    }
+    .btn:hover { background: #2980b9; }
+    .btn-secondary { background: #2ecc71; }
+    .btn-secondary:hover { background: #27ae60; }
+    .btn-danger { background: #e74c3c; }
+    .btn-danger:hover { background: #c0392b; }
+    input[type="text"] {
+      width: 100%;
+      padding: 10px;
+      margin-top: 5px;
+      box-sizing: border-box;
+      border: 2px solid #bdc3c7;
+      border-radius: 6px;
+      font-size: 16px;
+    }
+    .chat-box {
+      background: #ecf0f1;
+      border-radius: 8px;
+      padding: 15px;
+      height: 250px;
+      overflow-y: auto;
+      margin-bottom: 15px;
+      border: 1px solid #dcdde1;
+    }
+    .msg { margin-bottom: 10px; padding: 8px 12px; border-radius: 6px; font-size: 15px; line-height: 1.4; }
+    .msg-judge { background: #f1c40f; color: #2c3e50; font-weight: bold; border-left: 5px solid #f39c12; }
+    .msg-accuse { background: #e84118; color: white; font-style: italic; }
+    .msg-defense { background: #3498db; color: white; }
+    .msg-system { background: #7f8c8d; color: white; text-align: center; font-size: 13px; }
+    .msg-verdict { background: #9b59b6; color: white; font-weight: bold; font-size: 16px; text-align: center; }
+    .turn-indicator {
+      background: #34495e;
+      color: white;
+      text-align: center;
+      padding: 8px;
+      border-radius: 6px;
+      font-weight: bold;
+      margin-bottom: 15px;
+    }
+    .vote-panel {
+      display: flex;
+      gap: 10px;
+      margin-top: 15px;
+    }
+    .vote-panel .btn { margin-top: 0; }
+  </style>
+</head>
+<body>
+
+  <div class="game-container">
+    <h1>⚖️ Le Tribunal des Objets</h1>
+
+    <!-- ÉCRAN 1 : INSCRIPTION -->
+    <div id="screen-setup" class="screen active">
+      <p style="text-align: center; color: #7f8c8d;">Mode "Passe le téléphone" 📱</p>
+      <label><b>Nom du Joueur 1 (La Défense) :</b></label>
+      <input type="text" id="p1-name" value="Avocat Malin">
+      <br><br>
+      <label><b>Nom du Joueur 2 (L'Accusé) :</b></label>
+      <input type="text" id="p2-name" value="Le Gamin">
+      <button class="btn" onclick="startGame()">Lancer le Procès !</button>
+    </div>
+
+    <!-- ÉCRAN 2 : LE TRIBUNAL -->
+    <div id="screen-trial" class="screen">
+      <div id="turn-title" class="turn-indicator">C'est au tour de...</div>
+      <div id="chat-box" class="chat-box"></div>
+
+      <!-- Formulaire pour parler -->
+      <div id="action-speak">
+        <input type="text" id="speak-input" placeholder="Écris ta plaidoirie ou ta défense...">
+        <button class="btn" onclick="sendSpeech()">Envoyer la réplique</button>
+        <button class="btn btn-secondary" id="end-trial-btn" onclick="goToVote()" style="display:none;">Passer au Verdict du Jury 📋</button>
+      </div>
+
+      <!-- Panel pour voter -->
+      <div id="action-vote" style="display: none;">
+        <p style="text-align: center; font-weight: bold;">Le Jury doit maintenant trancher !</p>
+        <div class="vote-panel">
+          <button class="btn btn-danger" onclick="submitVote('coupable')">❌ COUPABLE</button>
+          <button class="btn btn-secondary" onclick="submitVote('non_coupable')">✅ INNOCENT</button>
+        </div>
+      </div>
+
+      <!-- Panel de Fin -->
+      <div id="action-restart" style="display: none;">
+        <button class="btn" onclick="restartGame()">Recommencer une audience 🔄</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const objects = [
+      { name: "Béatrice la brosse à dents", emoji: "🪥", complaint: "Cette enfant me secoue comme un shaker à cocktail ! Mon manche réclame des congés payés !", charge: "Secouage excessif au-dessus du lavabo" },
+      { name: "Gérard la pantoufle", emoji: "🥿", complaint: "On me traîne dans toute la maison comme si j'étais une voiture de rallye !", charge: "Usure prématurée de semelle" },
+      { name: "Maurice le réveil", emoji: "⏰", complaint: "On m'accuse de sonner trop tôt alors que je ne fais qu'obéir à mon contrat !", charge: "Diffamation horlogère et trois snoozes consécutifs" },
+      { name: "Ginette la cuillère", emoji: "🥄", complaint: "On me laisse au fond du yaourt comme une naufragée en pleine mer !", charge: "Abandon dans un pot de yaourt" },
+      { name: "Robert le coussin", emoji: "🛋️", complaint: "On me frappe pour me remettre en forme. JE SUIS UN COUSSIN, PAS UN SAC DE BOXE !", charge: "Violence décorative et maltraitance de rembourrage" }
+    ];
+
+    const pick = a => a[Math.floor(Math.random()*a.length)];
+
+    let player1 = "";
+    let player2 = "";
+    let currentTurn = 1; // 1 = Player 1 (Défense), 2 = Player 2 (Accusé)
+    let currentObject = null;
+    let roundCount = 0;
+
+    function showScreen(id) {
+      document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+      document.getElementById(id).classList.add('active');
+    }
+
+    function addMessage(who, text, kind) {
+      const box = document.getElementById('chat-box');
+      const msg = document.createElement('div');
+      msg.className = `msg msg-${kind}`;
+      msg.innerHTML = `<strong>${who} :</strong> ${text}`;
+      box.appendChild(msg);
+      box.scrollTop = box.scrollHeight;
+    }
+
+    function startGame() {
+      player1 = document.getElementById('p1-name').value.trim() || "Joueur 1";
+      player2 = document.getElementById('p2-name').value.trim() || "Joueur 2";
+      currentObject = pick(objects);
+      roundCount = 0;
+      currentTurn = 2; // L'accusé commence souvent à se défendre
+
+      document.getElementById('chat-box').innerHTML = "";
+      showScreen('screen-trial');
+      updateTurnIndicator();
+
+      // Discours d'ouverture du Juge IA
+      addMessage("⚖️ JUGE Gédéon", "LA COUR EST OUVERTE ! Que personne ne mâche de chewing-gum !", "judge");
+      addMessage(currentObject.emoji + " " + currentObject.name, currentObject.complaint, "accuse");
+      addMessage("⚖️ JUGE Gédéon", `L'accusation officielle est : « ${currentObject.charge} ». L'accusé(e) <b>${player2}</b> a la parole. Défends-toi !`, "judge");
+    }
+
+    function updateTurnIndicator() {
+      const name = currentTurn === 1 ? player1 : player2;
+      const role = currentTurn === 1 ? "l'Avocat de la Défense" : "l'Accusé(e)";
+      document.getElementById('turn-title').textContent = `📱 Passe l'écran à : ${name} (${role})`;
+    }
+
+    function sendSpeech() {
+      const input = document.getElementById('speak-input');
+      const text = input.value.trim();
+      if (!text) return;
+
+      const speakerName = currentTurn === 1 ? player1 : player2;
+      const speakerRole = currentTurn === 1 ? "defense" : "accuse";
+
+      addMessage(speakerName, text, speakerRole);
+      input.value = "";
+      roundCount++;
+
+      // Après 4 répliques au total, on affiche le bouton pour clore le procès
+      if (roundCount >= 4) {
+        document.getElementById('end-trial-btn').style.display = "block";
+      }
+
+      // Alterne le tour
+      currentTurn = currentTurn === 1 ? 2 : 1;
+      updateTurnIndicator();
+    }
+
+    function goToVote() {
+      document.getElementById('action-speak').style.display = "none";
+      document.getElementById('action-vote').style.display = "block";
+      document.getElementById('turn-title').textContent = "⚖️ DÉLIBÉRATION DU JURY (Déterminez la sentence ensemble)";
+    }
+
+    function submitVote(vote) {
+      document.getElementById('action-vote').style.display = "none";
+      document.getElementById('action-restart').style.display = "block";
+      document.getElementById('turn-title').textContent = "🏁 FIN DE L'AUDIENCE";
+
+      const linesG = [
+        "COUPABLE ! La cour condamne l'accusé à présenter des excuses solennelles et à traiter les objets avec respect !",
+        "Le jury a parlé : COUPABLE ! Que l'on apporte immédiatement un petit coussin de soutien psychologique à la victime !"
+      ];
+      const linesI = [
+        "NON COUPABLE ! La cour estime que les preuves sont aussi solides qu'une biscotte dans une baignoire !",
+        "ACQUITTÉ(E) ! L'objet devra désormais communiquer ses limites avec des mots et non avec des drames !"
+      ];
+
+      const verdictText = vote === 'coupable' ? pick(linesG) : pick(linesI);
+      const label = vote === 'coupable' ? "❌ COUPABLE" : "✅ INNOCENT";
+
+      addMessage("📋 Le Greffier", `Le verdict est tombé : l'accusé est déclaré <b>${label}</b>.`, "system");
+      addMessage("⚖️ JUGE Gédéon", verdictText, "verdict");
+    }
+
+    function restartGame() {
+      document.getElementById('action-speak').style.display = "block";
+      document.getElementById('action-vote').style.display = "none";
+      document.getElementById('action-restart').style.display = "none";
+      document.getElementById('end-trial-btn').style.display = "none";
+      showScreen('screen-setup');
+    }
+  </script>
+</body>
+</html>
